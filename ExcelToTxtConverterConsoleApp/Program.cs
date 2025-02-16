@@ -1,7 +1,7 @@
 ﻿using OfficeOpenXml;
 using System.Text;
 
-class ExcelToTxtConverter
+public class ExcelToTxtConverter
 {
     static void Main(string[] args)
     {
@@ -60,7 +60,7 @@ class ExcelToTxtConverter
         }
     }
 
-    static void SaveToFile(string directory, string fileName, string content)
+    private static void SaveToFile(string directory, string fileName, string content)
     {
         // Создание директории, если не существует
         Directory.CreateDirectory(directory);
