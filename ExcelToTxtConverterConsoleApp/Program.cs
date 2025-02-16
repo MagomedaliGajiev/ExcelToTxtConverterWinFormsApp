@@ -8,7 +8,8 @@ public class ExcelToTxtConverter
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         // Конфигурация
-        var sourceExcelPath = @"E:\03.02.2025.xlsx"; // Укажите путь к исходному файлу
+        Console.Write("Укажите путь к файлу:");
+        var sourceExcelPath = Console.ReadLine(); // Укажите путь к исходному файлу
         var dateCellAddress = "G2";
         var mainPathCell = "I6";
         var backupPathCell = "I7";
