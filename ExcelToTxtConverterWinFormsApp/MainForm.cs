@@ -11,7 +11,9 @@ namespace ExcelToTxtConverterWinFormsApp
         {
             InitializeComponent();
             InitializeBackgroundWorker();
+            InitializePathControls();
         }
+
         private void InitializeBackgroundWorker()
         {
             worker = new BackgroundWorker
@@ -24,6 +26,14 @@ namespace ExcelToTxtConverterWinFormsApp
             worker.ProgressChanged += Worker_ProgressChanged;
             worker.RunWorkerCompleted += Worker_RunWorkerCompleted;
         }
+
+        private void InitializePathControls()
+        {
+            // Инициализация значений по умолчанию
+            txtMainPath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "KTMS");
+            txtBackupPath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "KTMS_Backup");
+        }
+
         private void btnBrowseExcel_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
@@ -36,18 +46,56 @@ namespace ExcelToTxtConverterWinFormsApp
             }
         }
 
+        private void btnBrowseMainPath_Click(object sender, EventArgs e)
+        {
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+            {
+                dialog.Description = "Выберите основную папку для сохранения";
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    txtMainPath.Text = dialog.SelectedPath;
+                }
+            }
+        }
+
+        private void btnBrowseBackupPath_Click(object sender, EventArgs e)
+        {
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+            {
+                dialog.Description = "Выберите резервную папку для сохранения";
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    txtBackupPath.Text = dialog.SelectedPath;
+                }
+            }
+        }
+
         private void btnStart_Click(object sender, EventArgs e)
         {
-            if (!File.Exists(txtExcelPath.Text))
-            {
-                MessageBox.Show("Файл Excel не выбран или не существует!", "Ошибка",
-                              MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+            if (!ValidateInputs()) return;
 
             progressBar.Value = 0;
             btnStart.Enabled = false;
             worker.RunWorkerAsync();
+        }
+
+        private bool ValidateInputs()
+        {
+            if (!File.Exists(txtExcelPath.Text))
+            {
+                MessageBox.Show("Файл Excel не выбран или не существует!", "Ошибка",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtMainPath.Text))
+            {
+                MessageBox.Show("Основная папка для сохранения не выбрана!", "Ошибка",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
         }
 
         private void Worker_DoWork(object sender, DoWorkEventArgs e)
@@ -55,15 +103,15 @@ namespace ExcelToTxtConverterWinFormsApp
             try
             {
                 ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-                var sourceExcelPath = txtExcelPath.Text;
+                string sourceExcelPath = txtExcelPath.Text;
+                string mainDir = txtMainPath.Text;
+                string backupDir = txtBackupPath.Text;
 
                 using (var package = new ExcelPackage(new FileInfo(sourceExcelPath), "38214"))
                 {
                     var worksheet = package.Workbook.Worksheets[0];
 
-                    var rawDate = worksheet.Cells["G2"].Text;
-                    var mainDir = worksheet.Cells["I6"].Text;
-                    var backupDir = worksheet.Cells["I7"].Text;
+                    string rawDate = worksheet.Cells["G2"].Text;
 
                     if (!DateTime.TryParseExact(rawDate, "dd.MM.yy", null,
                         System.Globalization.DateTimeStyles.None, out DateTime fileDate))
@@ -71,11 +119,11 @@ namespace ExcelToTxtConverterWinFormsApp
                         throw new FormatException("Неверный формат даты в ячейке G2");
                     }
 
-                    var fileName = $"KTMS0L00_{fileDate:yyyyMMdd}.txt";
+                    string fileName = $"KTMS0L00_{fileDate:yyyyMMdd}.txt";
                     var sb = new StringBuilder();
 
-                    var totalRows = 40 - 3 + 1; // Расчет общего количества строк
-                    var currentRow = 0;
+                    int totalRows = 40 - 3 + 1;
+                    int currentRow = 0;
 
                     for (int row = 3; row <= 40; row++)
                     {
@@ -98,7 +146,11 @@ namespace ExcelToTxtConverterWinFormsApp
                     }
 
                     SaveToFile(mainDir, fileName, sb.ToString());
-                    SaveToFile(backupDir, fileName, sb.ToString());
+
+                    if (!string.IsNullOrWhiteSpace(backupDir))
+                    {
+                        SaveToFile(backupDir, fileName, sb.ToString());
+                    }
                 }
             }
             catch (Exception ex)
