@@ -27,40 +27,27 @@ namespace ExcelToTxtWebApp.Controllers
             try
             {
                 if (model?.ExcelFile == null || model.ExcelFile.Length == 0)
-                {
-                    model.Message = "Пожалуйста, выберите файл";
-                    return View(model);
-                }
+                    throw new Exception("Пожалуйста, выберите файл");
 
                 var config = new
                 {
                     DateCellAddress = "G2",
-                    MainPathCell = "I6",
-                    BackupPathCell = "I7",
                     StartRow = 3,
                     EndRow = 40,
-                    Columns = new[] { 3, 4, 5, 6, 7 },
-                    SavePaths = new
-                    {
-                        Main = Path.Combine(_env.WebRootPath, "generated"),
-                        Backup = Path.Combine(_env.WebRootPath, "backup")
-                    }
+                    Columns = new[] { 3, 4, 5, 6, 7 }
                 };
 
-                using var memoryStream = new MemoryStream();
-                await model.ExcelFile.CopyToAsync(memoryStream);
-                memoryStream.Position = 0;
+                using var stream = new MemoryStream();
+                await model.ExcelFile.CopyToAsync(stream);
 
-                using var package = new ExcelPackage(memoryStream, "38214");
+                using var package = new ExcelPackage(stream, "38214");
                 var worksheet = package.Workbook.Worksheets[0];
 
-                // Парсинг данных
+                // Парсинг даты
                 var rawDate = worksheet.Cells[config.DateCellAddress].Text;
                 if (!DateTime.TryParseExact(rawDate, "dd.MM.yy", null,
                     System.Globalization.DateTimeStyles.None, out DateTime fileDate))
-                {
                     throw new FormatException("Неверный формат даты в ячейке G2");
-                }
 
                 // Генерация содержимого
                 var sb = new StringBuilder();
@@ -72,38 +59,43 @@ namespace ExcelToTxtWebApp.Controllers
                     sb.AppendLine(string.Join(";", values));
                 }
 
-                // Сохранение файлов
                 var fileName = $"KTMS0L00_{fileDate:yyyyMMdd}.txt";
-                Directory.CreateDirectory(config.SavePaths.Main);
-                Directory.CreateDirectory(config.SavePaths.Backup);
+                model.GeneratedFiles.Add(new GeneratedFile
+                {
+                    FileName = fileName,
+                    Content = sb.ToString()
+                });
 
-                var mainPath = Path.Combine(config.SavePaths.Main, fileName);
-                var backupPath = Path.Combine(config.SavePaths.Backup, fileName);
-
-                await System.IO.File.WriteAllTextAsync(mainPath, sb.ToString(), Encoding.UTF8);
-                await System.IO.File.WriteAllTextAsync(backupPath, sb.ToString(), Encoding.UTF8);
-
-                model.GeneratedFiles.Add($"/generated/{fileName}");
-                model.GeneratedFiles.Add($"/backup/{fileName}");
-                model.Message = "Файлы успешно сгенерированы!";
+                model.Message = "Файлы готовы к сохранению!";
+                return View(model);
             }
             catch (Exception ex)
             {
                 model.Message = $"Ошибка: {ex.Message}";
+                return View(model);
             }
-
-            return View(model);
         }
 
-        public IActionResult Privacy()
+        [HttpPost]
+        public IActionResult GetFileContents([FromBody] FileRequest request)
         {
-            return View();
+            // В реальном приложении здесь должна быть проверка авторизации
+            var files = new List<GeneratedFile>
+            {
+                new() { FileName = request.FileName, Content = request.Content }
+            };
+            return Json(files);
         }
+
+        public IActionResult Privacy() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View();
-        }
+        public IActionResult Error() => View();
+    }
+
+    public class FileRequest
+    {
+        public string FileName { get; set; }
+        public string Content { get; set; }
     }
 }

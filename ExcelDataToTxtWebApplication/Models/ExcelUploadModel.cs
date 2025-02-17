@@ -10,6 +10,12 @@ namespace ExcelToTxtWebApp.Models
         public IFormFile ExcelFile { get; set; }
 
         public string Message { get; set; }
-        public List<string> GeneratedFiles { get; set; } = new List<string>();
+        public List<GeneratedFile> GeneratedFiles { get; set; } = new();
+    }
+
+    public class GeneratedFile
+    {
+        public string FileName { get; set; }
+        public string Content { get; set; }
     }
 }
