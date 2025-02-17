@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelToTxtConverterWinForms
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelToTxtConverterConsoleApp", "ExcelToTxtConverterConsoleApp\ExcelToTxtConverterConsoleApp.csproj", "{17DD223E-26A5-470D-A846-B592E473F667}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelDataToTxtWebApplication", "ExcelDataToTxtWebApplication\ExcelDataToTxtWebApplication.csproj", "{70C673A2-3047-48A7-A074-7366BD00DDF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{17DD223E-26A5-470D-A846-B592E473F667}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{17DD223E-26A5-470D-A846-B592E473F667}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17DD223E-26A5-470D-A846-B592E473F667}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70C673A2-3047-48A7-A074-7366BD00DDF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70C673A2-3047-48A7-A074-7366BD00DDF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70C673A2-3047-48A7-A074-7366BD00DDF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70C673A2-3047-48A7-A074-7366BD00DDF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
