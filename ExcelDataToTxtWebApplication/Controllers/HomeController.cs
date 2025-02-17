@@ -1,12 +1,20 @@
-using ExcelDataToTxtWebApplication.Models;
+using ExcelToTxtWebApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
 using System.Text;
 
-namespace ExcelDataToTxtWebApplication.Controllers
+namespace ExcelToTxtWebApp.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly IWebHostEnvironment _env;
+
+        public HomeController(IWebHostEnvironment env)
+        {
+            _env = env;
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        }
+
         public IActionResult Index()
         {
             return View(new ExcelUploadModel());
@@ -14,72 +22,70 @@ namespace ExcelDataToTxtWebApplication.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Index(ExcelUploadModel model)
+        public async Task<IActionResult> Index(ExcelUploadModel model)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-            var config = new
-            {
-                DateCellAddress = "G2",
-                MainPathCell = "I6",
-                BackupPathCell = "I7",
-                StartRow = 3,
-                EndRow = 40,
-                Columns = new[] { 3, 4, 5, 6, 7 }
-            };
-
             try
             {
-                if (model.ExcelFile?.Length > 0)
-                {
-                    // Копируем поток в MemoryStream
-                    using var memoryStream = new MemoryStream();
-                    model.ExcelFile.CopyTo(memoryStream);
-                    memoryStream.Position = 0;
-
-                    // Используем MemoryStream для ExcelPackage
-                    using var package = new ExcelPackage(memoryStream, "38214");
-                    var worksheet = package.Workbook.Worksheets[0];
-
-                    // Parse date
-                    var rawDate = worksheet.Cells[config.DateCellAddress].Text;
-                    if (!DateTime.TryParseExact(rawDate, "dd.MM.yy", null,
-                        System.Globalization.DateTimeStyles.None, out DateTime fileDate))
-                    {
-                        throw new FormatException("Неверный формат даты в ячейке G2");
-                    }
-
-                    // Get paths
-                    var mainDir = @"C:\ASSPOOTI";
-                    var backupDir = @"E:\BALLANS";
-                    Directory.CreateDirectory(mainDir);
-                    Directory.CreateDirectory(backupDir);
-
-                    // Generate content
-                    var sb = new StringBuilder();
-                    for (int row = config.StartRow; row <= config.EndRow; row++)
-                    {
-                        var values = config.Columns
-                            .Select(col => worksheet.Cells[row, col].Text?.Trim() ?? "")
-                            .ToList();
-                        sb.AppendLine(string.Join(";", values));
-                    }
-
-                    // Save files
-                    var fileName = $"KTMS0L00_{fileDate:yyyyMMdd}.txt";
-                    var mainPath = Path.Combine(mainDir, fileName);
-                    var backupPath = Path.Combine(backupDir, fileName);
-
-                    System.IO.File.WriteAllText(mainPath, sb.ToString(), Encoding.UTF8);
-                    System.IO.File.WriteAllText(backupPath, sb.ToString(), Encoding.UTF8);
-
-                    model.GeneratedFiles.Add(fileName);
-                    model.Message = "Файлы успешно сгенерированы!";
-                }
-                else
+                if (model?.ExcelFile == null || model.ExcelFile.Length == 0)
                 {
                     model.Message = "Пожалуйста, выберите файл";
+                    return View(model);
                 }
+
+                var config = new
+                {
+                    DateCellAddress = "G2",
+                    MainPathCell = "I6",
+                    BackupPathCell = "I7",
+                    StartRow = 3,
+                    EndRow = 40,
+                    Columns = new[] { 3, 4, 5, 6, 7 },
+                    SavePaths = new
+                    {
+                        Main = Path.Combine(_env.WebRootPath, "generated"),
+                        Backup = Path.Combine(_env.WebRootPath, "backup")
+                    }
+                };
+
+                using var memoryStream = new MemoryStream();
+                await model.ExcelFile.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                using var package = new ExcelPackage(memoryStream, "38214");
+                var worksheet = package.Workbook.Worksheets[0];
+
+                // Парсинг данных
+                var rawDate = worksheet.Cells[config.DateCellAddress].Text;
+                if (!DateTime.TryParseExact(rawDate, "dd.MM.yy", null,
+                    System.Globalization.DateTimeStyles.None, out DateTime fileDate))
+                {
+                    throw new FormatException("Неверный формат даты в ячейке G2");
+                }
+
+                // Генерация содержимого
+                var sb = new StringBuilder();
+                for (int row = config.StartRow; row <= config.EndRow; row++)
+                {
+                    var values = config.Columns
+                        .Select(col => worksheet.Cells[row, col].Text?.Trim() ?? "")
+                        .ToList();
+                    sb.AppendLine(string.Join(";", values));
+                }
+
+                // Сохранение файлов
+                var fileName = $"KTMS0L00_{fileDate:yyyyMMdd}.txt";
+                Directory.CreateDirectory(config.SavePaths.Main);
+                Directory.CreateDirectory(config.SavePaths.Backup);
+
+                var mainPath = Path.Combine(config.SavePaths.Main, fileName);
+                var backupPath = Path.Combine(config.SavePaths.Backup, fileName);
+
+                await System.IO.File.WriteAllTextAsync(mainPath, sb.ToString(), Encoding.UTF8);
+                await System.IO.File.WriteAllTextAsync(backupPath, sb.ToString(), Encoding.UTF8);
+
+                model.GeneratedFiles.Add($"/generated/{fileName}");
+                model.GeneratedFiles.Add($"/backup/{fileName}");
+                model.Message = "Файлы успешно сгенерированы!";
             }
             catch (Exception ex)
             {
@@ -87,6 +93,17 @@ namespace ExcelDataToTxtWebApplication.Controllers
             }
 
             return View(model);
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View();
         }
     }
 }

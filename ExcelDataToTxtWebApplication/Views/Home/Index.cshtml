@@ -1,38 +1,85 @@
-﻿@using System.IO <!-- Должно быть ПЕРВОЙ строкой -->
-@model ExcelUploadModel
-
+﻿@model ExcelToTxtWebApp.Models.ExcelUploadModel
 @{
-    ViewBag.Title = "Конвертер Excel в TXT";
+    ViewData["Title"] = "Конвертер Excel в TXT";
 }
 
-<h2>Конвертер Excel в TXT</h2>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>@ViewData["Title"]
+                    </h3>
+                </div>
 
-<form asp-action="Index" method="post" enctype="multipart/form-data">
-    @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <form asp-action="Index" method="post" enctype="multipart/form-data"
+                          class="needs-validation" novalidate>
+                        @Html.AntiForgeryToken()
 
-    <div class="form-group">
-        <label asp-for="ExcelFile"></label>
-        <input asp-for="ExcelFile" class="form-control" />
-        <span asp-validation-for="ExcelFile" class="text-danger"></span>
+                        <div class="mb-4">
+                            <label asp-for="ExcelFile" class="form-label fs-5">
+                                <i class="bi bi-upload me-2"></i>Выберите Excel файл
+                            </label>
+                            <input asp-for="ExcelFile" class="form-control form-control-lg"
+                                   accept=".xlsx" required>
+                            <span asp-validation-for="ExcelFile" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-file-earmark-arrow-down me-2"></i>Конвертировать
+                            </button>
+                        </div>
+                    </form>
+
+                    @if (!string.IsNullOrEmpty(Model.Message))
+                    {
+                        <div class="alert alert-dismissible fade show mt-4
+                            @(Model.GeneratedFiles.Any() ? "alert-success" : "alert-danger")" role="alert">
+                            @Model.Message
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (Model.GeneratedFiles.Any())
+                    {
+                        <div class="card mt-4 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">Скачать файлы:</h5>
+                                <div class="list-group">
+                                    @foreach (var file in Model.GeneratedFiles)
+                                    {
+                                        <a href="@file" class="list-group-item list-group-item-action" download>
+                                            <i class="bi bi-file-text me-2"></i>
+                                            @System.IO.Path.GetFileName(file)
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <button type="submit" class="btn btn-primary mt-2">Конвертировать</button>
-</form>
-
-@if (!string.IsNullOrEmpty(Model.Message))
-{
-    <div class="alert alert-info mt-3">
-        @Model.Message
-    </div>
-}
-
-@if (Model.GeneratedFiles.Any())
-{
-    <div class="mt-3">
-        <h4>Сгенерированные файлы:</h4>
-        @foreach (var file in Model.GeneratedFiles)
-        {
-            <a href="@file" class="btn btn-success" download>Скачать @System.IO.Path.GetFileName(file)</a>
-        }
-    </div>
+@section Scripts {
+    <script>
+        (() => {
+            'use strict'
+            const forms = document.querySelectorAll('.needs-validation')
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+    </script>
 }
