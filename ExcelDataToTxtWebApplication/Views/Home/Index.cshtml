@@ -77,34 +77,34 @@
 </div>
 
 @section Scripts {
-        <script>
-            async function saveFiles() {
-                try {
-                    const files = @Html.Raw(Json.Serialize(Model.GeneratedFiles));
+    <script>
+        async function saveFiles() {
+            try {
+                const files = @Html.Raw(Json.Serialize(Model.GeneratedFiles));
 
-                    if (!('showDirectoryPicker' in window)) {
-                        document.getElementById('fallbackLinks').classList.remove('d-none');
-                        throw new Error('Ваш браузер не поддерживает выбор директории');
-                    }
+                if (!('showDirectoryPicker' in window)) {
+                    document.getElementById('fallbackLinks').classList.remove('d-none');
+                    throw new Error('Ваш браузер не поддерживает выбор директории');
+                }
 
-                    const dirHandle = await window.showDirectoryPicker({
-                        mode: 'readwrite'
-                    });
+                const dirHandle = await window.showDirectoryPicker({
+                    mode: 'readwrite'
+                });
 
-                    for (const file of files) {
-                        const fileHandle = await dirHandle.getFileHandle(file.fileName, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(file.content);
-                        await writable.close();
-                    }
+                for (const file of files) {
+                    const fileHandle = await dirHandle.getFileHandle(file.fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(file.content);
+                    await writable.close();
+                }
 
-                    alert('Файлы успешно сохранены в выбранную директорию!');
-                } catch (err) {
-                    console.error('Ошибка сохранения:', err);
-                    if (!err.message.includes('браузер')) {
-                        alert('Ошибка: ' + err.message);
-                    }
+                alert('Файлы успешно сохранены в выбранную директорию!');
+            } catch (err) {
+                console.error('Ошибка сохранения:', err);
+                if (!err.message.includes('браузер')) {
+                    alert('Ошибка: ' + err.message);
                 }
             }
-        </script>
+        }
+    </script>
 }

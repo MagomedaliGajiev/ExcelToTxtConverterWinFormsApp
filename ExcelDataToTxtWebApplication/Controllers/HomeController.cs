@@ -1,6 +1,7 @@
 using ExcelToTxtWebApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using System.Security;
 using System.Text;
 
 namespace ExcelToTxtWebApp.Controllers
@@ -8,10 +9,12 @@ namespace ExcelToTxtWebApp.Controllers
     public class HomeController : Controller
     {
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _config;
 
-        public HomeController(IWebHostEnvironment env)
+        public HomeController(IWebHostEnvironment env, IConfiguration config)
         {
             _env = env;
+            _config = config;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         }
 
@@ -43,6 +46,12 @@ namespace ExcelToTxtWebApp.Controllers
                 using var package = new ExcelPackage(stream, "38214");
                 var worksheet = package.Workbook.Worksheets[0];
 
+               // получения путей из Excel
+                var serverDirs = new List<string>
+                {
+                    worksheet.Cells["I6"].Text.Trim(),
+                    worksheet.Cells["I7"].Text.Trim()
+                };
                 // Парсинг даты
                 var rawDate = worksheet.Cells[config.DateCellAddress].Text;
                 if (!DateTime.TryParseExact(rawDate, "dd.MM.yy", null,
@@ -66,6 +75,16 @@ namespace ExcelToTxtWebApp.Controllers
                     Content = sb.ToString()
                 });
 
+                // Сохранение на сервере
+                foreach (var dir in serverDirs)
+                {
+                    ValidateServerPath(dir); // Валидация пути
+
+                    Directory.CreateDirectory(dir);
+                    var fullPath = Path.Combine(dir, fileName);
+                    await System.IO.File.WriteAllTextAsync(fullPath, sb.ToString());
+                }
+
                 model.Message = "Файлы готовы к сохранению!";
                 return View(model);
             }
@@ -74,6 +93,18 @@ namespace ExcelToTxtWebApp.Controllers
                 model.Message = $"Ошибка: {ex.Message}";
                 return View(model);
             }
+        }
+
+        private void ValidateServerPath(string path)
+        {
+            var allowedPaths = _config.GetSection("StorageSettings:AllowedBasePaths")
+                .Get<List<string>>();
+
+            var isValid = allowedPaths.Any(allowed =>
+                Path.GetFullPath(path).StartsWith(Path.GetFullPath(allowed)));
+
+            if (!isValid)
+                throw new SecurityException($"Недопустимый путь для сохранения: {path}");
         }
 
         [HttpPost]
@@ -92,6 +123,8 @@ namespace ExcelToTxtWebApp.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error() => View();
     }
+
+
 
     public class FileRequest
     {

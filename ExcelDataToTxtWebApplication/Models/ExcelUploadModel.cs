@@ -11,6 +11,8 @@ namespace ExcelToTxtWebApp.Models
 
         public string Message { get; set; }
         public List<GeneratedFile> GeneratedFiles { get; set; } = new();
+        [Display(Name = "Серверные пути сохранения")]
+        public List<string> ServerPaths { get; set; } = new();
     }
 
     public class GeneratedFile
