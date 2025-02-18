@@ -36,34 +36,39 @@
 
                     @if (!string.IsNullOrEmpty(Model.Message))
                     {
-                        <div class="alert alert-dismissible fade show mt-4
+                            <div class="alert alert-dismissible fade show mt-4
                             @(Model.GeneratedFiles.Any() ? "alert-success" : "alert-danger")"
-                             role="alert">
+                                 role="alert">
                             @Model.Message
 
                             @if (Model.GeneratedFiles.Any())
                             {
-                                <div class="mt-3">
-                                    <button onclick="saveFiles()"
-                                            class="btn btn-success">
-                                        <i class="bi bi-save-fill me-2"></i>
-                                        Сохранить на компьютер
-                                    </button>
-                                    <div id="fallbackLinks" class="mt-2 d-none">
+                                        <div class="mt-3">
+                                            <button onclick="saveFiles()"
+                                                    class="btn btn-success">
+                                                <i class="bi bi-save-fill me-2"></i>
+                                                Сохранить на компьютер
+                                            </button>
+
+                                            <!-- Начало добавленного блока -->
+                                            <div id="fallbackLinks" class="mt-2 d-none">
+                                                <p class="text-muted">Ваш браузер не поддерживает выбор директории. Скачайте файлы по отдельности:</p>
                                         @foreach (var file in Model.GeneratedFiles)
                                         {
-                                            <a href="data:text/plain;charset=utf-8,@file.Content"
-                                               download="@file.FileName"
-                                               class="btn btn-outline-secondary">
-                                                @file.FileName
-                                            </a>
+                                                        <a href="data:text/plain;charset=utf-8,@file.Content"
+                                                           download="@file.FileName"
+                                                           class="btn btn-outline-secondary mb-2">
+                                                            <i class="bi bi-download me-2"></i>@file.FileName
+                                                        </a>
                                         }
-                                    </div>
-                                </div>
+                                            </div>
+                                            <!-- Конец добавленного блока -->
+
+                                        </div>
                             }
-                            <button type="button" class="btn-close"
-                                    data-bs-dismiss="alert"></button>
-                        </div>
+                                <button type="button" class="btn-close"
+                                        data-bs-dismiss="alert"></button>
+                            </div>
                     }
                 </div>
             </div>
@@ -72,37 +77,34 @@
 </div>
 
 @section Scripts {
-    <script>
-        async function saveFiles() {
-            try {
-                const files = @Html.Raw(Json.Serialize(Model.GeneratedFiles));
+        <script>
+            async function saveFiles() {
+                try {
+                    const files = @Html.Raw(Json.Serialize(Model.GeneratedFiles));
 
-                if (!('showSaveFilePicker' in window)) {
-                    document.getElementById('fallbackLinks').classList.remove('d-none');
-                    throw new Error('Браузер не поддерживает File System Access API');
-                }
+                    if (!('showDirectoryPicker' in window)) {
+                        document.getElementById('fallbackLinks').classList.remove('d-none');
+                        throw new Error('Ваш браузер не поддерживает выбор директории');
+                    }
 
-                for (const file of files) {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: file.fileName,
-                        types: [{
-                            description: 'Text Files',
-                            accept: { 'text/plain': ['.txt'] }
-                        }]
+                    const dirHandle = await window.showDirectoryPicker({
+                        mode: 'readwrite'
                     });
 
-                    const writable = await handle.createWritable();
-                    await writable.write(file.content);
-                    await writable.close();
-                }
+                    for (const file of files) {
+                        const fileHandle = await dirHandle.getFileHandle(file.fileName, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(file.content);
+                        await writable.close();
+                    }
 
-                alert('Файлы успешно сохранены!');
-            } catch (err) {
-                console.error('Ошибка сохранения:', err);
-                if (!err.message.includes('Браузер')) {
-                    alert('Ошибка при сохранении: ' + err.message);
+                    alert('Файлы успешно сохранены в выбранную директорию!');
+                } catch (err) {
+                    console.error('Ошибка сохранения:', err);
+                    if (!err.message.includes('браузер')) {
+                        alert('Ошибка: ' + err.message);
+                    }
                 }
             }
-        }
-    </script>
+        </script>
 }
