@@ -42,4 +42,4 @@
 1. Требуется .NET 8.0 SDK
 2. Клонировать репозиторий:
    ```bash
-   git clone https://github.com/ваш-репозиторий.git
+   git clone https://github.com/MagomedaliGajiev.git
